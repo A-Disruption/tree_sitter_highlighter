@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-iced = { version = "0.14.0", features = [
-    "lazy",
+iced = { version = "0.15.0-dev", features = [
     "advanced",
     "highlighter",
     "canvas",
@@ -15,3 +14,11 @@ iced = { version = "0.14.0", features = [
 tree-sitter = "0.26"
 tree-sitter-rust = "0.24"
 anyhow = "1.0.100"
+# `iced` is asked for by version above and pointed at a source here, so every
+# crate in the graph asking for `iced 0.15.0-dev` resolves to one checkout —
+# which is what keeps `Element` and `Theme` one type across all of them.
+# 0.15 is unreleased, so this block is not optional: cargo cannot resolve
+# `iced 0.15.0-dev` from crates.io without it. Cargo only honours `[patch]` in
+# the manifest of the workspace being built, so a consumer needs its own copy.
+[patch.crates-io]
+iced = { git = "https://github.com/iced-rs/iced.git", branch = "master" }

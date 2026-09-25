@@ -33,15 +33,16 @@ impl CodeView {
         let settings = TsSettings {
             text: Arc::<str>::from(state.content.text()),
         };
-        let extended = state.theme.extended_palette();
+        let extended = state.theme.palette();
         let syntax = SyntaxHighlight::generate(extended);
 
         column!(
             pick_list(
-                Theme::ALL,
                 Some(state.theme.clone()),
-                Message::ChangeTheme,
-            ),
+                Theme::ALL,
+                ToString::to_string,
+            )
+            .on_select(Message::ChangeTheme),
             text_editor(&state.content)
                 .placeholder("Type something here...")
                 .highlight_with::<TreeSitterIcedHighlighter>(

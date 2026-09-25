@@ -18,11 +18,10 @@ use std::{cmp::Ordering, ops::Range, sync::Arc};
 
 use tree_sitter::{InputEdit, Parser, Point, Query, QueryCursor, Tree};
 use tree_sitter::StreamingIterator;
-use iced::font::Font;
-use iced::advanced::text::highlighter::Format;
-use iced::advanced::text::Highlighter as IcedHighlighter;
+use iced::advanced::text::highlighter::Style as HighlightStyle;
+use iced::advanced::text::Parser as IcedParser;
 use iced::widget::text_editor;
-use iced::theme::palette::Extended;
+use iced::theme::Palette;
 use iced::{Color, Theme};
 
 const EXTRA_QUERY: &str = r#"
@@ -365,8 +364,8 @@ impl Highlighter {
 }
 
 impl Highlighter {
-    pub fn to_format(kind: &TokenKind, theme: &Theme) -> Format<Font> {
-        let p = theme.extended_palette();
+    pub fn to_format(kind: TokenKind, theme: &Theme) -> HighlightStyle {
+        let p = theme.palette();
 
         let color = match kind {
             TokenKind::Comment => p.background.strong.color,
@@ -399,9 +398,9 @@ impl Highlighter {
             TokenKind::Rainbow6 => p.danger.base.color,     // Pink
         };
 
-        Format {
+        HighlightStyle {
             color: Some(color),
-            font: None,
+            style: None,
         }
     }
 }
@@ -732,10 +731,10 @@ pub struct TreeSitterIcedHighlighter {
     line_starts: Vec<usize>,
 }
 
-impl IcedHighlighter for TreeSitterIcedHighlighter {
+impl IcedParser for TreeSitterIcedHighlighter {
     type Settings = TsSettings;
-    type Highlight = TokenKind;
-    type Iterator<'a> = std::vec::IntoIter<(Range<usize>, Self::Highlight)>;
+    type Output = TokenKind;
+    type Iterator<'a> = std::vec::IntoIter<(Range<usize>, Self::Output)>;
 
     fn new(settings: &Self::Settings) -> Self {
         let mut ts = Highlighter::new().expect("ts init");
@@ -762,7 +761,7 @@ impl IcedHighlighter for TreeSitterIcedHighlighter {
         self.current = line;
     }
 
-    fn highlight_line(&mut self, line: &str) -> Self::Iterator<'_> {
+    fn parse_line(&mut self, line: &str) -> Self::Iterator<'_> {
         let text = self.settings.text.as_ref();
 
         let line_start = self.line_starts.get(self.current).copied().unwrap_or(text.len());
@@ -778,7 +777,7 @@ impl IcedHighlighter for TreeSitterIcedHighlighter {
 
         let spans = match self.ts.highlight_range(text, line_start..effective_end) {
             Ok(s) => s,
-            Err(e) => {
+            Err(_) => {
                 Vec::new()
             }
         };
@@ -817,11 +816,13 @@ impl TreeSitterIcedHighlighter {
     /// Convert a `TokenKind` to an iced `Format` using the theme's color scheme.
     ///
     /// Use this as the second argument to `highlight_with`.
-    pub fn to_format(kind: &TokenKind, theme: &Theme) -> Format<Font> {
-        let extended = theme.extended_palette();
+    pub fn to_format(kind: TokenKind, theme: &Theme) -> HighlightStyle {
+        let extended = theme.palette();
         let syntax = SyntaxHighlight::generate(extended);
 
-        let font = None;
+        // master's `highlighter::Style` carries a font *style* (italic, oblique)
+        // rather than a whole `Font`; nothing here italicises a token yet.
+        let style = None;
 
         let color = match kind {
             TokenKind::Comment => syntax.comment,
@@ -853,9 +854,9 @@ impl TreeSitterIcedHighlighter {
             _ => syntax.variable,
         };
 
-        Format {
+        HighlightStyle {
             color: Some(color),
-            font,
+            style,
         }
     }
 }
@@ -892,7 +893,7 @@ impl SyntaxHighlight {
     /// Generate a syntax highlighting color scheme from an iced extended palette.
     ///
     /// The colors are automatically adjusted for light/dark themes.
-    pub fn generate(extended: &Extended) -> Self {
+    pub fn generate(extended: &Palette) -> Self {
         let is_dark = extended.is_dark;
 
         let adjust = |color: Color, hue_shift: f32, sat_mult: f32, light_target: f32| -> Color {
@@ -971,7 +972,7 @@ impl SyntaxHighlight {
 ///
 /// This style uses the theme's extended palette for a consistent look.
 pub fn code_gen_text_editor_style(theme: &Theme, status: text_editor::Status) -> text_editor::Style {
-    let palette = theme.extended_palette();
+    let palette = theme.palette();
 
     let active = text_editor::Style {
         background: iced::Background::Color(palette.background.weakest.color),
