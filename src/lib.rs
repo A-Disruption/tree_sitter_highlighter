@@ -326,7 +326,7 @@ impl Highlighter {
         while let Some(m) = matches.get() {
             let priority = extract_priority(&self.query, m.pattern_index);
 
-            for cap in m.captures {
+            for cap in m.captures() {
                 let cap_name = self.query.capture_names()[cap.index as usize];
                 let kind = classify_capture(cap_name);
                 if kind == TokenKind::Default {

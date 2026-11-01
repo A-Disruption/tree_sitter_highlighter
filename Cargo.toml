@@ -11,7 +11,7 @@ iced = { version = "0.15.0-dev", features = [
     "tokio",
     "debug",
 ] }
-tree-sitter = "0.26"
+tree-sitter = "0.27"
 tree-sitter-rust = "0.24"
 anyhow = "1.0.100"
 # `iced` is asked for by version above and pointed at a source here, so every
